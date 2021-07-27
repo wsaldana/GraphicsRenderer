@@ -122,7 +122,11 @@ class Render(object):
         self.write(filename+'.bmp')
         
     def point(self, x, y, color=None):
-        self.framebuffer[y][x] = color or self.current_color
+        pos_viewport_x = int((x+1)*self.width/2)
+        pos_viewport_y = int((y+1)*self.height/2)
+        sx =  self.viewportWidth / self.width
+        sy =  self.viewportHeight / self.height
+        self.framebuffer[int(pos_viewport_y*sy - self.viewportY)][int(pos_viewport_x*sx - self.viewportX)] = color or self.current_color
         
 '''
 r = Render(1024, 768)
@@ -165,7 +169,7 @@ gl.glInit()
 gl.glCreateWindow(100,100)
 gl.glClearColor(1,1,0)
 gl.glClear()
-gl.glViewPort(1, 1, 15, 15)
+gl.glViewPort(0, 0, 15, 30)
 gl.glColor(0,0,1)
-gl.glVertex(10, 10)
+gl.glVertex(0, 0)
 gl.glFinish('render')
