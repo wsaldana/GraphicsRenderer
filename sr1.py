@@ -31,16 +31,18 @@ class Render(object):
         ]
         self.viewportX = 0
         self.viewportY = 0
-        self.viewportWidth = 1024
-        self.viewPortHeight = 768
+        self.viewportWidth = self.width
+        self.viewportHeight = self.height
         self.clear_color = BLACK
         self.current_color = WHITE
         
     def setWidth(self, width):
         self.width = width
+        self.viewportWidth = width
         
     def setHeight(self, height):
         self.height = height
+        self.viewportHeight = height
         
     def setClearColor(self, color):
         self.clear_color = color
@@ -52,7 +54,7 @@ class Render(object):
         self.viewportX = x
         self.viewportY = y
         self.viewportWidth = width
-        self.viewPortHeight = height
+        self.viewportHeight = height
         
     def clear(self):
         self.framebuffer = [
@@ -83,9 +85,38 @@ class Render(object):
             f.write(dword(0))
             
             '''Pixel data / Bitmap (framebuffer)'''
+            sx = self.width / self.viewportWidth
+            sy = self.height / self.viewportHeight
+
+            #vph = self.viewportHeight
+            
+            viewport = [ [self.clear_color for x in range(self.width)] for y in range(self.height) ]
+
+            y_range = self.viewportHeight + self.viewportY
+            x_range = self.viewportWidth + self.viewportX
+            print(y_range)
+            print(self.height)
+            
+            if((y_range <= self.height) and (x_range <= self.width)):
+                for y in range(self.viewportY, y_range):
+                    for x in range(self.viewportX, x_range):
+                        p = self.framebuffer[y][x]
+                        if (p != self.clear_color):
+                            #viewport[y][x] = p
+                            #self.framebuffer[y][x] = self.clear_color
+                            viewport[int(y*sy + self.viewportY)][int(x*sx + self.viewportX)] = p
+                            #ny = int(y*sy + self.viewportY)
+                            #nx = int(x*sx + self.viewportX)
+                            print(str(x)+" -> "+str(int(x*sx + self.viewportX)))
+                            #if ((ny >= self.viewportHeight and ny < self.viewportHeight) and ())
+                            #viewport[][] = self.framebuffer[y][x]
+            else:
+                print("El viewport no es válido: se mostrará un viewport con las mismas dimensiones que el window.")
+                print("Asegurese que las coordenadas del viewport se encuentren dentro de la window.")
+            
             for y in range(self.height):
                 for x in range(self.width):
-                    f.write(self.framebuffer[y][x])
+                    f.write(viewport[y][x])
                     
     def render(self, filename):
         self.write(filename+'.bmp')
@@ -112,26 +143,29 @@ class MyGL(object):
         self.render.clear()
         
     def glViewPort(self, x, y, width, height):
-        gl.setViewport(x, y, width, height)
+        self.render.setViewport(x, y, width, height)
     
     def glClear(self):
         self.render.clear()
         
     def glClearColor(self, r, g, b):
-        self.render.setClearColor(color(r,g,b))
+        self.render.setClearColor(color(r*255,g*255,b*255))
         
     def glVertex(self, x, y):
-        pass
+        self.render.point(x, y)
     
     def glColor(self, r, g, b):
-        self.render.setCurrentColor(color(r,g,b))
+        self.render.setCurrentColor(color(r*255,g*255,b*255))
         
     def glFinish(self, filename):
         self.render.render(filename)
 
 gl = MyGL()
 gl.glInit()
-gl.glCreateWindow(1080,768)
-gl.glClearColor(255,0,0)
+gl.glCreateWindow(100,100)
+gl.glClearColor(1,1,0)
 gl.glClear()
-gl.glFinish('hola')
+gl.glViewPort(1, 1, 15, 15)
+gl.glColor(0,0,1)
+gl.glVertex(10, 10)
+gl.glFinish('render')
