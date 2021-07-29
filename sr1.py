@@ -3,7 +3,7 @@ UNIVERSIDAD DEL VALLE DE GUATEMALA
 Gráficas por computadoras #10
 Walter Saldaña #19897
 
-SR1: POINT
+SR2: LINE
 '''
 
 import struct
@@ -142,6 +142,15 @@ class Render(object):
         self.framebuffer[int(pos_viewport_y*sy - self.viewportY)][int(pos_viewport_x*sx - self.viewportX)] = color or self.current_color
 
     def line(self, x0, x1, y0, y1, color=None):
+        if(x0>x1):
+            temp = x0
+            x0 = x1
+            x1 = temp
+        if(y0>y1):
+            temp = y0
+            y0 = y1
+            y1 = temp
+
         pos_viewport_x0 = self.scaleToViewport(x0, 'x')
         pos_viewport_y0 = self.scaleToViewport(y0, 'y')
         pos_viewport_x1 = self.scaleToViewport(x1, 'x')
@@ -212,5 +221,6 @@ gl.glVertex(-0.1, 0)
 gl.glColor(0,0,0)
 gl.glLine(-0.4, -0.2, 0.7, 0.3)
 gl.glColor(1,0,0)
-gl.glLine(-0.2, -0.4, 0.2, 0.4)
+#gl.glLine(-0.2, -0.4, 0.2, 0.4)
+gl.glLine(0.2, 0.4, -0.2, -0.4)
 gl.glFinish('render')
