@@ -1,3 +1,11 @@
+'''
+UNIVERSIDAD DEL VALLE DE GUATEMALA
+Gráficas por computadoras #10
+Walter Saldaña #19897
+
+SR1: POINT
+'''
+
 import struct
 
 def char(c):
