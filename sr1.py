@@ -29,6 +29,28 @@ RED = color(255,0,0)
 GREEN = color(0,255,0)
 BLUE = color(0,0,255)
 
+class Obj(object):
+  def __init__(self, filename):
+    with open(filename) as f:
+      self.lines = f.read().splitlines()
+    self.vertices = []
+    self.faces = []
+    self.read()
+
+  def read(self):
+    for line in self.lines:
+      if line:
+        prefix, value = line.split(' ', 1)
+
+        if prefix == 'v':
+          self.vertices.append(
+            list(map(float, value.split(' ')))
+          )
+        elif prefix == 'f':
+          self.faces.append(
+            [list(map(int, face.split('/'))) for face in value.split(' ')]
+          )
+
 class Render(object):
     def __init__(self):
         self.width = 1024 
@@ -127,6 +149,7 @@ class Render(object):
     def render(self, filename):
         self.write(filename+'.bmp')
 
+    #Ingresa una coordenada entre -1,1 y retorna el equivalente a la posicion int en el framebuffer
     def scaleToViewport(self, p, s):
         if(s=='x'):
             scale =  self.viewportWidth / self.width
@@ -139,7 +162,10 @@ class Render(object):
         pos_viewport_y = int((y+1)*self.height/2)
         sx =  self.viewportWidth / self.width
         sy =  self.viewportHeight / self.height
-        self.framebuffer[int(pos_viewport_y*sy - self.viewportY)][int(pos_viewport_x*sx - self.viewportX)] = color or self.current_color
+        ny = int(pos_viewport_y*sy - self.viewportY)
+        nx = int(pos_viewport_x*sx - self.viewportX)
+        if ny<self.height and nx<self.width:
+            self.framebuffer[ny][nx] = color or self.current_color
 
     def line(self, x0, x1, y0, y1, color=None):
         if(x0>x1):
@@ -160,16 +186,35 @@ class Render(object):
             m = 1000000
         else:
             m = (y1 - y0) / (x1 - x0)
-        b = y1 - (m * x1)
+        b = pos_viewport_y1 - (m * pos_viewport_x1)
 
         if(m <= 1):
             for x in range(pos_viewport_x0, pos_viewport_x1):
-                y = round((m * x) + b) + int(self.viewportHeight/4)
+                y = round((m * x) + b)
                 self.framebuffer[y][x] = color or self.current_color
         else:
             for y in range(pos_viewport_y0, pos_viewport_y1):
-                x = round((y - b) / m) + int(self.viewportWidth/4)
+                x = round((y - b) / m)
                 self.framebuffer[y][x] = color or self.current_color
+
+    def load(self, filename, translate, scale):
+        model = Obj(filename)
+        
+        for face in model.faces:
+            vcount = len(face)
+            for j in range(vcount):
+                f1 = face[j][0]
+                f2 = face[(j + 1) % vcount][0]
+
+                v1 = model.vertices[f1 - 1]
+                v2 = model.vertices[f2 - 1]
+
+                x1 = (v1[0] + translate[0]) * scale[0]
+                y1 = (v1[1] + translate[1]) * scale[1]
+                x2 = (v2[0] + translate[0]) * scale[0]
+                y2 = (v2[1] + translate[1]) * scale[1]
+                
+                self.line(x1, x2, y1, y2)
         
 '''
 r = Render(1024, 768)
@@ -210,17 +255,20 @@ class MyGL(object):
     def glLine(self, x0, y0, x1, y1):
         self.render.line(x0, x1, y0, y1)
 
+    def load(self, filename, translate, scale):
+        self.render.load(filename, translate, scale)
+
 gl = MyGL()
 gl.glInit()
-gl.glCreateWindow(300, 300)
-gl.glClearColor(1,1,0)
+gl.glCreateWindow(2000, 2000)
+gl.glClearColor(0,0,0)
 gl.glClear()
-gl.glViewPort(0, 0, 300, 300)
-gl.glColor(0,0,1)
-gl.glVertex(-0.1, 0)
-gl.glColor(0,0,0)
-gl.glLine(-0.4, -0.2, 0.7, 0.3)
-gl.glColor(1,0,0)
+gl.glViewPort(0, 0, 2000, 2000)
+gl.glColor(0,1,0)
+#gl.glVertex(-0.5, -0.5)
+#gl.glColor(0,0,0)
+#gl.glLine(0.5, 0.5, -0.5, 0)
+#gl.glColor(1,0,0)
 #gl.glLine(-0.2, -0.4, 0.2, 0.4)
-gl.glLine(0.2, 0.4, -0.2, -0.4)
+gl.load("Pokemon.obj", (0, -1), (0.8, 0.8))
 gl.glFinish('render')
