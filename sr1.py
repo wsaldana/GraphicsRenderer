@@ -52,20 +52,23 @@ class Obj(object):
                 )
           
 class Polygon(object):
-    def __init__(self, polygon):
-        self.polygon = polygon
+    
+    def __init__(self, vertices):
+        self.vertices = vertices
+        self.normalized_vertices = []
+        self.perimeter = []
         
     def normalize(self, n, maximo, minimo):
         return (n-minimo)/(maximo-minimo)
-                
-    def normalizePolygon(self):
-        values = [c for point in self.polygon for c in point]
+    
+    def normalizePolygon(self, vertices=None):
+        values = [c for point in vertices for c in point]
         maximo = max(values)
         minimo = min(values)
         normalized = []
-        for point in self.polygon:
+        for point in vertices:
             normalized.append((self.normalize(point[0], maximo, minimo), self.normalize(point[1], maximo, minimo)))
-        self.polygon = normalized
+        self.normalized_vertices = normalized
         
     def normalizePolygons(self, polygons):
         #joined = [point for polygon in polygons for point in polygon]
@@ -146,8 +149,6 @@ class Render(object):
             '''Pixel data / Bitmap (framebuffer)'''
             sx = self.width / self.viewportWidth
             sy = self.height / self.viewportHeight
-
-            #vph = self.viewportHeight
             
             viewport = [ [self.clear_color for x in range(self.width)] for y in range(self.height) ]
 
@@ -179,12 +180,19 @@ class Render(object):
         self.write(filename+'.bmp')
 
     #Ingresa una coordenada entre -1,1 y retorna el equivalente a la posicion int en el framebuffer
-    def scaleToViewport(self, p, s):
+    def scaleViewportToFB(self, p, s):
         if(s=='x'):
             scale =  self.viewportWidth / self.width
         else:
             scale =  self.viewportHeight / self.height
-        return int((p+1)*self.width/2*scale - self.viewportY)
+        return round((p+1)*self.width/2*scale - self.viewportY)
+    
+    def scaleFBtoViewport(self, p, s):
+        if(s=='x'):
+            scale =  self.viewportWidth / self.width
+        else:
+            scale =  self.viewportHeight / self.height
+        return 2 * ((p+self.viewportY)/(scale*self.width)) - 1
         
     def point(self, x, y, color=None):
         pos_viewport_x = int((x+1)*self.width/2)
@@ -196,11 +204,18 @@ class Render(object):
         if ny<self.height and nx<self.width:
             self.framebuffer[ny][nx] = color or self.current_color
 
-    def line(self, x0, x1, y0, y1, color=None):
-        pos_viewport_x0 = self.scaleToViewport(x0, 'x')
-        pos_viewport_y0 = self.scaleToViewport(y0, 'y')
-        pos_viewport_x1 = self.scaleToViewport(x1, 'x')
-        pos_viewport_y1 = self.scaleToViewport(y1, 'y')
+    def line(self, x0, x1, y0, y1, color=None, viewport=True):
+        points = []
+        if(viewport):
+            pos_viewport_x0 = self.scaleViewportToFB(x0, 'x')
+            pos_viewport_y0 = self.scaleViewportToFB(y0, 'y')
+            pos_viewport_x1 = self.scaleViewportToFB(x1, 'x')
+            pos_viewport_y1 = self.scaleViewportToFB(y1, 'y')
+        else:
+            pos_viewport_x0 = x0
+            pos_viewport_y0 = y0
+            pos_viewport_x1 = x1
+            pos_viewport_y1 = y1
 
         if((x1 - x0)==0):
             m = 1000000
@@ -212,17 +227,22 @@ class Render(object):
             if(x0>x1) :
                 pos_viewport_x0, pos_viewport_x1 = pos_viewport_x1, pos_viewport_x0
                 pos_viewport_y0, pos_viewport_y1 = pos_viewport_y1, pos_viewport_y0
-            for x in range(pos_viewport_x0, pos_viewport_x1):
+            for x in range(pos_viewport_x0, pos_viewport_x1+1):
                 y = round((m * x) + b)
                 self.framebuffer[y][x] = color or self.current_color
+                #points.append( (self.scaleFBtoViewport(x, 'x'), self.scaleFBtoViewport(y, 'y')) )
+                points.append( (x, y) )
         else:
             if(y0>y1) :
                 pos_viewport_x0, pos_viewport_x1 = pos_viewport_x1, pos_viewport_x0
                 pos_viewport_y0, pos_viewport_y1 = pos_viewport_y1, pos_viewport_y0
                 
-            for y in range(pos_viewport_y0, pos_viewport_y1):
+            for y in range(pos_viewport_y0, pos_viewport_y1+1):
                 x = round((y - b) / m)
                 self.framebuffer[y][x] = color or self.current_color
+                #points.append( (self.scaleFBtoViewport(x, 'x'), self.scaleFBtoViewport(y, 'y')) )
+                points.append( (x, y) )
+        return points
 
     def load(self, filename, translate, scale):
         model = Obj(filename)
@@ -244,19 +264,100 @@ class Render(object):
                 self.line(x1, x2, y1, y2)
                 
     def drawPolygon(self, polygon, translate=(-0.5,0), scale=(1,1)):
-        n = len(polygon)
+        perimeter = []
+        n = len(polygon.vertices)
         for i in range(n):
-            x0 = (polygon[i][0] + translate[0]) * scale[0]
-            x1 = (polygon[(i+1)%n][0] + translate[0]) * scale[0]
-            y0 = (polygon[i][1] + translate[1]) * scale[1]
-            y1 = (polygon[(i+1)%n][1] + translate[1]) * scale[1]
-            self.line(x0, x1, y0, y1)
-        
-'''
-r = Render(1024, 768)
-r.point(50,10, GREEN)
-r.render()
-'''
+            x0 = (polygon.vertices[i][0] + translate[0]) * scale[0]
+            x1 = (polygon.vertices[(i+1)%n][0] + translate[0]) * scale[0]
+            y0 = (polygon.vertices[i][1] + translate[1]) * scale[1]
+            y1 = (polygon.vertices[(i+1)%n][1] + translate[1]) * scale[1]
+            perimeter += self.line(x0, x1, y0, y1)
+        polygon.perimeter = perimeter
+        return polygon
+    '''
+    def fillPolygon(self, polygon):
+        x_list = [c[0] for c in polygon.perimeter]
+        y_list = [c[1] for c in polygon.perimeter]
+        nx = max(x_list)-min(x_list)
+        ny = max(y_list)-min(y_list)
+        fb_perimeter = [ [1 if (x,y) in polygon.perimeter else 0 for x in range(min(x_list), max(x_list))] for y in range(min(y_list), max(y_list)) ]
+        for y in range(len(fb_perimeter)):
+            n_vertices = fb_perimeter[y].count(1)
+            if n_vertices > 1:
+                if(n_vertices % 2 == 0):
+                    temp = fb_perimeter[y]
+                    acumulador = 0
+                    for i in range(int(n_vertices/2)):
+                        x0 = temp.index(1)
+                        xf = temp[x0+1:].index(1)+x0+1
+                        self.line(x0 + min(x_list) + acumulador, xf + min(x_list) + acumulador, y+min(y_list), y+min(y_list), viewport=False)
+                        j = 0
+                        while temp[0] == 1:
+                            temp = temp[xf+1+j:]
+                            acumulador += xf+1+j
+                else:
+                    self.line(fb_perimeter[y].index(1) + min(x_list), len(fb_perimeter[y])-fb_perimeter[y][::-1].index(1) + min(x_list), y+min(y_list), y+min(y_list), viewport=False)
+    '''
+    
+    
+    def fillPolygon(self, polygon):
+        x_list = [c[0] for c in polygon.perimeter]
+        y_list = [c[1] for c in polygon.perimeter]
+        nx = max(x_list)-min(x_list)
+        ny = max(y_list)-min(y_list)
+        fb_perimeter = [ [1 if (x,y) in polygon.perimeter else 0 for x in range(min(x_list), max(x_list))] for y in range(min(y_list), max(y_list)) ]
+        for y in range(1,len(fb_perimeter)-1):
+            toggle_paint = False
+            last = 0
+            start = fb_perimeter[y].index(1)
+            end = len(fb_perimeter[y])-fb_perimeter[y][::-1].index(1)
+            #print((start, end, len(fb_perimeter[y])))
+            for x in range(start, end):
+                if toggle_paint:
+                    self.framebuffer[y + min(y_list)][x + min(x_list)] = self.current_color
+                if(fb_perimeter[y][x]==1):
+                    if((not last) and (not (x + min(x_list), y + min(y_list)) in polygon.vertices)):
+                        toggle_paint = not toggle_paint
+                    last = 1
+                else:
+                    last = 0
+    
+    
+    '''
+    def fillPolygon(self, polygon):
+        n = 1
+        m = 1
+        while n>0:
+            poly = self.drawPolygon(polygon, translate=(-0.5-(0.001*m),0), scale=(n,n))
+            n -= 0.005
+            m += 1
+    '''
+    '''
+    def fillPolygon(self, polygon):
+        x_list = [c[0] for c in polygon.perimeter]
+        y_list = [c[1] for c in polygon.perimeter]
+        mx = round((max(x_list)+min(x_list)) / 2)
+        my = round((max(y_list)+min(y_list)) / 2)
+        for i in range(len(polygon.perimeter)):
+            self.line(mx, polygon.perimeter[i][0], my, polygon.perimeter[i][1], viewport=False)
+    '''
+    '''
+    def fillPolygon(self, polygon):
+        x_list = [c[0] for c in polygon.perimeter]
+        y_list = [c[1] for c in polygon.perimeter]
+        mx = (max(x_list)+min(x_list)) / 2
+        my = (max(y_list)+min(y_list)) / 2
+        n = len(polygon.perimeter)
+        for i in range(n):
+            for j in range(2):
+                if(j==0):
+                    print((mx, polygon.perimeter[i][0], my, polygon.perimeter[i][1]))
+                    self.line(mx, polygon.perimeter[i][0], my, polygon.perimeter[i][1])
+                else:
+                    print((mx, (polygon.perimeter[(i+1)%n][0]+polygon.perimeter[i][0])/2, my, (polygon.perimeter[(i+1)%n][1]+polygon.perimeter[i][1])/2))
+                    self.line(mx, (polygon.perimeter[(i+1)%n][0]+polygon.perimeter[i][0])/2, my, (polygon.perimeter[(i+1)%n][1]+polygon.perimeter[i][1])/2)
+    '''
+
 
 class MyGL(object):
     def __init__(self):
@@ -295,34 +396,24 @@ class MyGL(object):
         self.render.load(filename, translate, scale)
         
     def polygon(self, poly):
-        self.render.drawPolygon(poly)
+        self.render.fillPolygon(self.render.drawPolygon(poly))
 
 gl = MyGL()
 gl.glInit()
-gl.glCreateWindow(2000, 2000)
+gl.glCreateWindow(1600, 1600)
 gl.glClearColor(0,0,0)
 gl.glClear()
-gl.glViewPort(0, 0, 2000, 2000)
+gl.glViewPort(0, 0, 1600, 1600)
 gl.glColor(0,1,0)
 #gl.glVertex(-0.5, -0.5)
 #gl.glColor(0,0,0)
 #gl.glLine(0.5, 0.5, -0.5, 0)
 #gl.glColor(1,0,0)
-
 #gl.glLine(-0.9, 0.4, -0.1, 0.6)
-#gl.glLine(0.1, 0.6, 0.9, 0.4)
-#gl.glLine(-0.6, -0.1, -0.4, -0.9)
-#gl.glLine(0.4, -0.9, 0.6, -0.1)
+gl.load("Pokemon.obj", (0, -1), (0.8, 0.8))
 
-#gl.glLine(-0.1, 0.6, -0.9, 0.4)
-#gl.glLine(0.9, 0.4, 0.1, 0.6)
-#gl.glLine(-0.4, -0.9, -0.6, -0.1)
-#gl.glLine(0.6, -0.1, 0.4, -0.9)
-
-#gl.load("Pokemon.obj", (0, -1), (0.8, 0.8))
-
-poly = Polygon(((377, 249), (411, 197), (436, 249)))
-poly.normalizePolygon()
+'''
+poly = Polygon([(1,2)])
 polys = poly.normalizePolygons((
     ((165, 380), (185, 360), (180, 330), (207, 345), (233, 330), (230, 360), (250, 380), (220, 385), (205, 410), (193, 383)),
     ((321, 335), (288, 286), (339, 251) ,(374, 302)),
@@ -331,10 +422,18 @@ polys = poly.normalizePolygons((
     ((682, 175), (708, 120), (735, 148), (739, 170))
 ))
 
-#gl.polygon(poly.polygon)
-gl.polygon(polys[0])
-gl.polygon(polys[1])
-gl.polygon(polys[2])
-gl.polygon(polys[3])
-gl.polygon(polys[4])
+poly1 = Polygon(polys[0])
+poly2 = Polygon(polys[1])
+poly3 = Polygon(polys[2])
+poly4 = Polygon(polys[3])
+poly5 = Polygon(polys[4])
+
+gl.polygon(poly1)
+gl.polygon(poly2)
+gl.polygon(poly3)
+gl.polygon(poly4)
+gl.glColor(0,0,0)
+gl.polygon(poly5)
+'''
+
 gl.glFinish('render')
