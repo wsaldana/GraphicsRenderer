@@ -16,6 +16,7 @@ gl.glViewPort(0, 0, 1600, 1600)
 gl.glColor(0,1,0)
 #gl.glVertex(-0.5, -0.5)
 #gl.glLine(-0.9, 0.4, -0.1, 0.6)
-gl.load("Pokemon.obj", (0, -1), (0.8, 0.8))
+#gl.load("Pokemon.obj", (0, -1), (0.8, 0.8))
+gl.triangle((10, 70), (50, 160), (70, 80))
 
 gl.glFinish('render')

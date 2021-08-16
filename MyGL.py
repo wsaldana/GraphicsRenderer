@@ -39,3 +39,6 @@ class MyGL(object):
         
     def polygon(self, poly):
         self.render.fillPolygon(self.render.drawPolygon(poly))
+
+    def triangle(self, A, B, C):
+        self.render.triangle(A, B, C)

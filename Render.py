@@ -1,11 +1,16 @@
+from collections import namedtuple
 from Obj import Obj
 from utils import *
+from Triangle import Triangle
 
 BLACK = color(0,0,0)
 WHITE = color(255,255,255)
 RED = color(255,0,0)
 GREEN = color(0,255,0)
 BLUE = color(0,0,255)
+
+V2 = namedtuple('Vector2', ['x', 'y'])
+V3 = namedtuple('Vector3', ['x', 'y', 'z'])
 
 class Render(object):
     def __init__(self):
@@ -212,6 +217,17 @@ class Render(object):
                     last = 1
                 else:
                     last = 0
+
+    def triangle(self, A, B, C, color=None):
+        t = Triangle(A, B, C)
+        enclosing_max, enclosing_min = t.getEnclosingBox()
+
+        for x in range(enclosing_min.x, enclosing_max.x + 1):
+            for y in range(enclosing_min.y, enclosing_max.y + 1):
+                w, v, u = t.barycentric(V2(x, y))
+                if w < 0 or v < 0 or u < 0:
+                    continue
+                self.framebuffer[y][x] = color or self.current_color
                     
     '''
     def fillPolygon(self, polygon):
