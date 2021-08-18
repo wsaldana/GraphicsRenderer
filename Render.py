@@ -28,6 +28,10 @@ class Render(object):
         self.viewportHeight = self.height
         self.clear_color = BLACK
         self.current_color = WHITE
+        self.zbuffer = [
+            [-float('inf') for x in range(self.width)]
+            for y in range(self.height)
+        ]
         
     def setWidth(self, width):
         self.width = width
@@ -52,6 +56,10 @@ class Render(object):
     def clear(self):
         self.framebuffer = [
             [self.clear_color for x in range(self.width)]
+            for y in range(self.height)
+        ]
+        self.zbuffer = [
+            [-float('inf') for x in range(self.width)]
             for y in range(self.height)
         ]
         
@@ -229,7 +237,12 @@ class Render(object):
                 w, v, u = t.barycentric(V2(x, y))
                 if w < 0 or v < 0 or u < 0:
                     continue
-                self.framebuffer[y][x] = color or self.current_color
+
+                z = A.z * w + B.z * v + C.z * u
+                if z > self.zbuffer[x][y]:
+                    self.point(x, y, color)
+                    self.zbuffer[x][y] = z
+                    self.framebuffer[y][x] = color or self.current_color
 
     def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
         return V3(
