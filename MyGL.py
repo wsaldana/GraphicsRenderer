@@ -40,5 +40,5 @@ class MyGL(object):
     def polygon(self, poly):
         self.render.fillPolygon(self.render.drawPolygon(poly))
 
-    def triangle(self, A, B, C):
+    def triangle(self, A, B, C, viewport=False):
         self.render.triangle(A, B, C)
