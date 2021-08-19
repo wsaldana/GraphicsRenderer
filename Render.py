@@ -228,6 +228,11 @@ class Render(object):
                 else:
                     last = 0
 
+    def zBufferRender(self, v):
+        if v.z > self.zbuffer[v.x][v.y]:
+            self.zbuffer[v.x][v.y] = v.z
+            return True
+
     def triangle(self, A, B, C, color=None):
         t = Triangle(A, B, C)
         enclosing_max, enclosing_min = t.getEnclosingBox()
@@ -238,10 +243,8 @@ class Render(object):
                 if w < 0 or v < 0 or u < 0:
                     continue
 
-                z = A.z * w + B.z * v + C.z * u
-                if z > self.zbuffer[x][y]:
-                    self.point(x, y, color)
-                    self.zbuffer[x][y] = z
+                v = V3(x, y, A.z * w + B.z * v + C.z * u)
+                if self.zBufferRender(v):
                     self.framebuffer[y][x] = color or self.current_color
 
     def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):

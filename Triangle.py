@@ -38,6 +38,6 @@ class Triangle(object):
             return -1, -1, -1
         u = cx/cz
         v = cy/cz
-        w = 1 - (u + v)
+        w = 1 - ((cx+cy)/cz)
 
         return w, v, u
