@@ -294,15 +294,84 @@ class Render(object):
                 intensity = dot(normal, light)
                 grey = round(255 * intensity)
                 if grey < 0:
-                    continue # dont paint this face
-
-                # vertices are ordered, no need to sort!
-                # vertices.sort(key=lambda v: v.x + v.y)
+                    continue
     
                 A, B, C, D = vertices 
             
                 self.triangle(A, B, C, color=color(grey, grey, grey))
                 self.triangle(A, C, D, color=color(grey, grey, grey))
+
+    def loadEarth(self, translate, scale):
+        model = Obj('earth.obj')
+        light = V3(0,0,1)
+        centro = V2(round(self.width / 2), round(self.height / 2))
+        radio = 400
+
+        for face in model.faces:
+            vcount = len(face)
+
+            f1 = face[0][0] - 1
+            f2 = face[1][0] - 1
+            f3 = face[2][0] - 1
+
+            a = self.transform(model.vertices[f1], translate, scale)
+            b = self.transform(model.vertices[f2], translate, scale)
+            c = self.transform(model.vertices[f3], translate, scale)
+            d = None
+
+            if vcount == 3:
+                normal = norm(cross(V3(a.x - b.x, a.y - b.y, a.z - b.z), V3(c.x - a.x, c.y - a.y, c.z - a.z)))
+            else:
+                f4 = face[3][0] - 1   
+                d = self.transform(model.vertices[f4], translate, scale)
+                normal = norm(cross(V3(a.x - b.x, a.y - b.y, a.z - b.z), V3(b.x - c.x, b.y - c.y, b.z - c.z)))
+
+            cr, cg, cb = 47, 171, 232
+            tierra = 82+randrange(-10,10), 187+randrange(-10,10), 47+randrange(-10,10)
+            
+            if a.y > 1000 or b.y > 1000 or c.y > 1000:
+                if a.x < 1000 or b.x < 1000 or c.x < 1000:
+                    cr, cg, cb = tierra
+            elif a.y > 950 or b.y > 950 or c.y > 950:
+                if (a.x > 550 or b.x > 550 or c.x > 550) and (a.x < 900 or b.x < 900 or c.x < 900) :
+                    cr, cg, cb = tierra
+            elif a.y > 900 or b.y > 900 or c.y > 900:
+                if (a.x > 550 or b.x > 550 or c.x > 550) and (a.x < 650 or b.x < 650 or c.x < 650) :
+                    cr, cg, cb = tierra
+                if (a.x > 850 or b.x > 850 or c.x > 850) and (a.x < 870 or b.x < 870 or c.x < 870) :
+                    cr, cg, cb = tierra
+            elif a.y > 850 or b.y > 850 or c.y > 850:
+                if (a.x > 580 or b.x > 580 or c.x > 580) and (a.x < 680 or b.x < 680 or c.x < 680) :
+                    cr, cg, cb = tierra
+                if (a.x > 870 or b.x > 870 or c.x > 870) and (a.x < 900 or b.x < 900 or c.x < 900) :
+                    cr, cg, cb = tierra
+            elif a.y > 800 or b.y > 800 or c.y > 800:
+                if (a.x > 610 or b.x > 610 or c.x > 610) and (a.x < 780 or b.x < 780 or c.x < 780) :
+                    cr, cg, cb = tierra
+            elif a.y > 750 or b.y > 750 or c.y > 750:
+                if (a.x > 680 or b.x > 680 or c.x > 680) and (a.x < 750 or b.x < 750 or c.x < 750) :
+                    cr, cg, cb = tierra
+            elif a.y > 700 or b.y > 700 or c.y > 700:
+                if (a.x > 780 or b.x > 780 or c.x > 780) and (a.x < 900 or b.x < 900 or c.x < 900) :
+                    cr, cg, cb = tierra
+            elif a.y > 550 or b.y > 550 or c.y > 550:
+                if (a.x > 740 or b.x > 740 or c.x > 740) and (a.x < 1000 or b.x < 1000 or c.x < 1000) :
+                    cr, cg, cb = tierra
+            elif a.y > 400 or b.y > 400 or c.y > 400:
+                if (a.x > 830 or b.x > 830 or c.x > 830) and (a.x < 950 or b.x < 950 or c.x < 950) :
+                    cr, cg, cb = tierra
+
+            intensity = dot(normal, light)
+            cr = round(cr * intensity)
+            cg = round(cg * intensity)
+            cb = round(cb * intensity)
+            if cr+cg+cb <= 0:
+                continue
+            col = color(cr, cg, cb)
+
+            self.triangle(a, b, c, color=col)
+            if d:
+                self.triangle(a, c, d, color=col)
                     
     '''
     def fillPolygon(self, polygon):

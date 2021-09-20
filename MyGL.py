@@ -42,3 +42,6 @@ class MyGL(object):
 
     def triangle(self, A, B, C, viewport=False):
         self.render.triangle(A, B, C)
+
+    def earth(self, translate=(800, 800, 0), scale=(1,1,1)):
+        self.render.loadEarth(translate, scale)
