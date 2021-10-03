@@ -254,52 +254,37 @@ class Render(object):
             round((vertex[2] * scale[2]) + translate[2])
         )
 
-    def load(self, filename, translate, scale):
+    def load(self, filename, translate, scale, texture=None):
         model = Obj(filename)
         light = V3(0,0,1)
 
         for face in model.faces:
             vcount = len(face)
 
+            f1 = face[0][0] - 1
+            f2 = face[1][0] - 1
+            f3 = face[2][0] - 1
+
+            a = self.transform(model.vertices[f1], translate, scale)
+            b = self.transform(model.vertices[f2], translate, scale)
+            c = self.transform(model.vertices[f3], translate, scale)
+            d = None
+
             if vcount == 3:
-                f1 = face[0][0] - 1
-                f2 = face[1][0] - 1
-                f3 = face[2][0] - 1
-
-                a = self.transform(model.vertices[f1], translate, scale)
-                b = self.transform(model.vertices[f2], translate, scale)
-                c = self.transform(model.vertices[f3], translate, scale)
-
                 normal = norm(cross(V3(a.x - b.x, a.y - b.y, a.z - b.z), V3(c.x - a.x, c.y - a.y, c.z - a.z)))
-                intensity = dot(normal, light)
-                grey = round(255 * intensity)
-                if grey < 0:
-                    continue
-            
-                self.triangle(a, b, c, color=color(grey, grey, grey))
             else:
-                f1 = face[0][0] - 1
-                f2 = face[1][0] - 1
-                f3 = face[2][0] - 1
                 f4 = face[3][0] - 1   
-                
-                vertices = [
-                    self.transform(model.vertices[f1], translate, scale),
-                    self.transform(model.vertices[f2], translate, scale),
-                    self.transform(model.vertices[f3], translate, scale),
-                    self.transform(model.vertices[f4], translate, scale)
-                ]
+                d = self.transform(model.vertices[f4], translate, scale)
+                normal = norm(cross(V3(a.x - b.x, a.y - b.y, a.z - b.z), V3(b.x - c.x, b.y - c.y, b.z - c.z)))
 
-                normal = norm(cross(V3(vertices[0].x - vertices[1].x, vertices[0].y - vertices[1].y, vertices[0].z - vertices[1].z), V3(vertices[1].x - vertices[2].x, vertices[1].y - vertices[2].y, vertices[1].z - vertices[2].z)))
-                intensity = dot(normal, light)
-                grey = round(255 * intensity)
-                if grey < 0:
-                    continue
-    
-                A, B, C, D = vertices 
-            
-                self.triangle(A, B, C, color=color(grey, grey, grey))
-                self.triangle(A, C, D, color=color(grey, grey, grey))
+            intensity = dot(normal, light)
+            grey = round(255 * intensity)
+            if grey < 0:
+                continue
+
+            self.triangle(a, b, c, color=color(grey, grey, grey))
+            if d:
+                self.triangle(a, c, d, color=color(grey, grey, grey))
 
     def loadEarth(self, translate, scale):
         model = Obj('earth.obj')
@@ -372,6 +357,19 @@ class Render(object):
             self.triangle(a, b, c, color=col)
             if d:
                 self.triangle(a, c, d, color=col)
+
+    # aqi
+
+
+
+
+
+
+
+
+
+
+
                     
     '''
     def fillPolygon(self, polygon):
