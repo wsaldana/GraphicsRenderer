@@ -34,8 +34,8 @@ class MyGL(object):
     def glLine(self, x0, y0, x1, y1):
         self.render.line(x0, x1, y0, y1)
 
-    def load(self, filename, translate, scale):
-        self.render.load(filename, translate, scale)
+    def load(self, filename, translate, scale, rotate):
+        self.render.load(filename, translate, scale, rotate)
         
     def polygon(self, poly):
         self.render.fillPolygon(self.render.drawPolygon(poly))
@@ -45,3 +45,12 @@ class MyGL(object):
 
     def earth(self, translate=(800, 800, 0), scale=(1,1,1)):
         self.render.loadEarth(translate, scale)
+
+    def texture(self, t):
+        self.render.current_texture = t
+
+    def lookAt(self, eye, center, up):
+        self.render.lookAt(eye, center, up)
+
+    def draw_arrays(self, arrays="TRIANGLES"):
+        self.render.draw_arrays(arrays)

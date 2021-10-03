@@ -3,7 +3,9 @@ from Obj import Obj
 from utils import *
 from Triangle import Triangle
 from random import randrange
+from math import sin, cos
 from LinearAlgebra import *
+from Shader import gourad
 
 BLACK = color(0,0,0)
 WHITE = color(255,255,255)
@@ -32,6 +34,9 @@ class Render(object):
             [-float('inf') for x in range(self.width)]
             for y in range(self.height)
         ]
+        self.current_texture = None
+        self.active_shader = gourad
+        self.light = V3(0,0,1)
         
     def setWidth(self, width):
         self.width = width
@@ -233,58 +238,198 @@ class Render(object):
             self.zbuffer[v.x][v.y] = v.z
             return True
 
-    def triangle(self, A, B, C, color=None):
-        t = Triangle(A, B, C)
-        enclosing_max, enclosing_min = t.getEnclosingBox()
+    def triangle(self):
+        
+            A = next(self.active_vertex_array)
+            B = next(self.active_vertex_array)
+            C = next(self.active_vertex_array)
+            triangle = Triangle(A, C, B)
+            
+            if self.current_texture:
+                tA = next(self.active_vertex_array)
+                tB = next(self.active_vertex_array)
+                tC = next(self.active_vertex_array)
+            
+            nA = next(self.active_vertex_array)
+            nB = next(self.active_vertex_array)
+            nC = next(self.active_vertex_array)
+            
+            bbox = triangle.getEnclosingBox()
+            xmin = round(bbox[1].x) 
+            ymin = round(bbox[1].y)
+            xmax = round(bbox[0].x)
+            ymax = round(bbox[0].y)
 
-        for x in range(enclosing_min.x, enclosing_max.x + 1):
-            for y in range(enclosing_min.y, enclosing_max.y + 1):
-                w, v, u = t.barycentric(V2(x, y))
-                if w < 0 or v < 0 or u < 0:
-                    continue
+            for x in range(xmin, xmax + 1):
+                for y in range(ymin, ymax + 1):
+                    w, v, u = triangle.barycentric(V2(x, y))
+                    if w < 0 or v < 0 or u < 0:
+                        continue
+                    
+                    if self.current_texture:
+                        tx = tA.x * w + tB.x * v + tC.x * u
+                        ty = tA.y * w + tB.y * v + tC.y * u
+                        col = self.active_shader(
+                            self,
+                            triangle=(A, B, C),
+                            bar=(w, v, u),
+                            texture_coords=(tx, ty),
+                            varying_normals=(nA, nB, nC)
+                        )
+                    
+                    else:
+                        col = self.active_shader(
+                            self,
+                            triangle=(A, B, C),
+                            bar=(w, v, u),
+                            varying_normals=(nA, nB, nC)
+                        )
+                    
+                    z = A.z * w + B.z * v + C.z * u
+                    
+                    if x < len(self.zbuffer) and y < len(self.zbuffer[x]) and z > self.zbuffer[x][y]:
+                        self.framebuffer[y][x] = col
+                        self.zbuffer[x][y] = z
 
-                v = V3(x, y, A.z * w + B.z * v + C.z * u)
-                if self.zBufferRender(v):
-                    self.framebuffer[y][x] = color or self.current_color
+    def transform(self, vertex):
+        augmented_vertex = [[vertex.x], [vertex.y], [vertex.z], [1]]
+        transformed_vertex = multMatrix(self.ViewPort, multMatrix(self.Projection, multMatrix(self.View, multMatrix(self.Model, augmented_vertex))))
 
-    def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
-        return V3(
-            round((vertex[0] * scale[0]) + translate[0]),
-            round((vertex[1] * scale[1]) + translate[1]),
-            round((vertex[2] * scale[2]) + translate[2])
-        )
+        transformed_vertex = [
+            (transformed_vertex[0][0]/transformed_vertex[3][0]),
+            (transformed_vertex[1][0]/transformed_vertex[3][0]),
+            (transformed_vertex[2][0]/transformed_vertex[3][0])
+        ]
+        return V3(*transformed_vertex)
 
-    def load(self, filename, translate, scale, texture=None):
+    def load(self, filename, translate, scale, rotate):
+        self.loadModelMatrix(translate, scale, rotate)
         model = Obj(filename)
-        light = V3(0,0,1)
+        vertex_buffer = []
 
         for face in model.faces:
-            vcount = len(face)
+            for v in range(len(face)):
+                vertex = self.transform(V3(*model.vertices[face[v][0] - 1]))
+                vertex_buffer.append(vertex)
+                
+            if self.current_texture:
+                for v in range(len(face)):
+                    tvertex = V3(*model.tvertices[face[v][1] - 1])
+                    vertex_buffer.append(tvertex)
+                    
+            for v in range(len(face)):
+                normal = V3(*model.normales[face[v][2] - 1])
+                vertex_buffer.append(normal)
+        
+        self.active_vertex_array = iter(vertex_buffer)
 
-            f1 = face[0][0] - 1
-            f2 = face[1][0] - 1
-            f3 = face[2][0] - 1
+    def draw_arrays(self, polygon):
+        if polygon == 'TRIANGLES':
+            try:
+                while True:
+                    self.triangle()
+            except StopIteration:
+                pass
+    
+    def loadModelMatrix(self, translate, scale, rotate):
+        translate = V3(*translate)
+        scale = V3(*scale)
+        rotate = V3(*rotate)
+        
+        translation_matrix = [
+                [1, 0, 0, translate.x],
+                [0, 1, 0, translate.y],
+                [0, 0, 1, translate.z],
+                [0, 0, 0, 1]
+            ]
+        
+        a = rotate.x
+        rotation_matrix_x = [
+                [1, 0, 0, 0],
+                [0, cos(a), -sin(a), 0],
+                [0, sin(a), cos(a), 0],
+                [0, 0, 0, 1]
+            ]
+        
+        a = rotate.y
+        rotation_matrix_y = [
+                [cos(a), 0, sin(a), 0],
+                [0, 1, 0, 0],
+                [-sin(a), 0, cos(a), 0],
+                [0, 0, 0, 1]
+            ]
+        
+        a = rotate.z
+        rotation_matrix_z = [
+                [cos(a), -sin(a), 0, 0],
+                [sin(a), cos(a), 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1]
+            ]
+        
+        rotation_matrix = multMatrix(rotation_matrix_x, multMatrix(rotation_matrix_y, rotation_matrix_z))
+        
+        scale_matrix = [
+                [scale.x, 0, 0, 0],
+                [0, scale.y, 0, 0],
+                [0, 0, scale.z, 0],
+                [0, 0, 0, 1]
+            ]
+        
+        self.Model = multMatrix(translation_matrix, multMatrix(rotation_matrix, scale_matrix))
+    
+    def loadViewMatrix(self, x, y, z, center):
+        M = [
+                [x.x, x.y, x.z, 0],
+                [y.x, y.y, y.z, 0],
+                [z.x, z.y, z.z, 0],
+                [0, 0, 0, 1]
+            ]
+        
+        O = [
+                [1, 0, 0, -center.x],
+                [0, 1, 0, -center.y],
+                [0, 0, 1, -center.z],
+                [0, 0, 0, 1]
+            ]
+        
+        self.View = multMatrix(M, O)
+    
+    def loadProjectionMatrix(self, coeff):
+        self.Projection = [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, coeff, 1]
+            ]
+    
+    def loadViewportMatrix(self, x = 0, y = 0):
+        self.ViewPort = [
+                [self.width/2, 0, 0, x + self.width/2],
+                [0, self.height/2, 0, y + self.height/2],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1]
+            ]
+        
+    def lookAt(self, eye, center, up):
+        eye = V3(*eye)
+        center = V3(*center)
+        up = V3(*up)
+        z = norm(sub(eye, center))
+        x = norm(cross(up, z))
+        y = norm(cross(z, x))
+        self.loadViewMatrix(x, y, z, center)
+        self.loadProjectionMatrix(
+            -1/length(sub(eye, center))
+        )
+        self.loadViewportMatrix()
 
-            a = self.transform(model.vertices[f1], translate, scale)
-            b = self.transform(model.vertices[f2], translate, scale)
-            c = self.transform(model.vertices[f3], translate, scale)
-            d = None
+    
 
-            if vcount == 3:
-                normal = norm(cross(V3(a.x - b.x, a.y - b.y, a.z - b.z), V3(c.x - a.x, c.y - a.y, c.z - a.z)))
-            else:
-                f4 = face[3][0] - 1   
-                d = self.transform(model.vertices[f4], translate, scale)
-                normal = norm(cross(V3(a.x - b.x, a.y - b.y, a.z - b.z), V3(b.x - c.x, b.y - c.y, b.z - c.z)))
 
-            intensity = dot(normal, light)
-            grey = round(255 * intensity)
-            if grey < 0:
-                continue
 
-            self.triangle(a, b, c, color=color(grey, grey, grey))
-            if d:
-                self.triangle(a, c, d, color=color(grey, grey, grey))
+
+
 
     def loadEarth(self, translate, scale):
         model = Obj('earth.obj')

@@ -20,3 +20,19 @@ def norm(v0):
     return V3(0, 0, 0)
 
   return V3(v0.x/v0length, v0.y/v0length, v0.z/v0length)
+
+def sub(v0, v1):
+    return V3(
+        v0.x - v1.x,
+        v0.y - v1.y,
+        v0.z - v1.z
+    )
+
+def length(v0):
+    return (v0.x**2 + v0.y**2 + v0.z**2) ** 0.5
+
+def multMatrix(X, Y):
+  return [
+    [ sum(a * b for a, b in zip(x,y)) for y in zip(*Y) ]
+    for x in X
+  ]
