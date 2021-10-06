@@ -21,9 +21,15 @@ class Obj(object):
                         list(map(float, value.split(' ')))
                     )
                 elif prefix == 'vt':
-                    self.tvertices.append(
-                        list(map(float, value.split(' ')))
-                    )
+                    vts = value.split(' ')
+                    if len(vts)==3:
+                        self.tvertices.append(
+                            list(map(float, value.split(' ')))
+                        )
+                    else:
+                        self.tvertices.append(
+                            list(map(float, value.split(' '))) + [0.0000]
+                        )
                 elif prefix == 'vn':
                     self.normales.append(
                         list(map(float, value.split(' ')))
