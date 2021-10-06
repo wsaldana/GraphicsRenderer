@@ -10,10 +10,10 @@ from Texture import Texture
 
 gl = MyGL()
 gl.glInit()
-gl.glCreateWindow(1600, 1600)
+gl.glCreateWindow(500, 500)
 gl.glClearColor(0,0,0)
 gl.glClear()
-gl.glViewPort(0, 0, 1600, 1600)
+gl.glViewPort(0, 0, 500, 500)
 gl.glColor(0,1,0)
 #gl.glVertex(-0.5, -0.5)
 #gl.glLine(-0.9, 0.4, -0.1, 0.6)

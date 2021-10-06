@@ -29,6 +29,10 @@ class Obj(object):
                         list(map(float, value.split(' ')))
                     )
                 elif prefix == 'f':
-                    self.faces.append(
-                        [list(map(int, face.split('/'))) for face in value.split(' ')]
-                    )
+                    faces = value.split(' ')
+                    
+                    for i in range(len(faces)-2):
+                        triangle = [faces[0], faces[i+1], faces[i+2]]
+                        self.faces.append(
+                            [list(map(int, face.split('/'))) for face in triangle if len(face)>2]
+                        )
