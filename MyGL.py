@@ -20,13 +20,13 @@ class MyGL(object):
         self.render.clear()
         
     def glClearColor(self, r, g, b):
-        self.render.setClearColor(color(r*255,g*255,b*255))
+        self.render.setClearColor(color(int(r*255),int(g*255),int(b*255)))
         
     def glVertex(self, x, y):
         self.render.point(x, y)
     
     def glColor(self, r, g, b):
-        self.render.setCurrentColor(color(r*255,g*255,b*255))
+        self.render.setCurrentColor(color(int(r*255),int(g*255),int(b*255)))
         
     def glFinish(self, filename):
         self.render.render(filename)
@@ -54,3 +54,6 @@ class MyGL(object):
 
     def draw_arrays(self, arrays="TRIANGLES"):
         self.render.draw_arrays(arrays)
+
+    def background(self):
+        self.render.background()

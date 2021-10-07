@@ -424,12 +424,6 @@ class Render(object):
         )
         self.loadViewportMatrix()
 
-    
-
-
-
-
-
 
     def loadEarth(self, translate, scale):
         model = Obj('earth.obj')
@@ -503,7 +497,15 @@ class Render(object):
             if d:
                 self.triangle(a, c, d, color=col)
 
-    # aqi
+    def background(self):
+        for y in range(0, round(self.height * 0.4)):
+            for x in range(self.width):
+                r = round(31*sin(x*y)+89)
+                g = round(60*sin(x*y)+136)
+                b = round(9*sin(x*y)+55)
+                grass = color(r, g, b)
+                self.framebuffer[y][x] = grass
+
 
 
 

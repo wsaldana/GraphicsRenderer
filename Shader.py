@@ -17,7 +17,7 @@ def gourad(render, **kwargs):
     intensity = w*iA + v*iB + u*iC
     
     return color(
-      int(tcolor[2] * intensity) if tcolor[0] * intensity > 0 else 0,
+      int(tcolor[2] * intensity) if tcolor[0] * intensity >= 0 else 0,
       int(tcolor[1] * intensity) if tcolor[1] * intensity > 0 else 0,
-      int(tcolor[0] * intensity) if tcolor[2] * intensity > 0 else 0
+      int(tcolor[0] * intensity) if tcolor[2] * intensity >= 0 else 0
     )
